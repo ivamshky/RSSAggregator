@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -19,17 +18,16 @@ type apiConfig struct {
 	ctx context.Context
 }
 
+const DB_URL = "postgresql://postgres:%s@%s:%s/%s?sslmode=disable"
+
 func main() {
 	godotenv.Load(".env")
 
 	// db
-	dbUrl, exists := os.LookupEnv("DB_URL")
-	if !exists {
-		log.Fatal("DB_URL env not found")
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	conn, err := pgx.Connect(ctx, dbUrl)
+	dbUrl := fmt.Sprintf(DB_URL, os.Getenv("DB_PWD"), os.Getenv("DB_HOST"), os.Getenv("DB_PORT"), os.Getenv("DB_SCHEMA"))
+	fmt.Println("Connecting to db", dbUrl)
+
+	conn, err := pgx.Connect(context.Background(), dbUrl)
 	if err != nil {
 		log.Fatal("couldn't connect err:", err)
 	}
@@ -37,7 +35,7 @@ func main() {
 
 	apiCfg := apiConfig{
 		DB:  conn,
-		ctx: ctx,
+		ctx: context.Background(),
 	}
 
 	router := configRouter()
@@ -46,6 +44,7 @@ func main() {
 	v1Router.Get("/ready", HandleReadiness)
 	v1Router.Get("/err", HandleError)
 	v1Router.Post("/create", apiCfg.HandleCreateUser)
+	v1Router.Get("/user/{name}", apiCfg.HandleGetByName)
 
 	router.Mount("/v1", v1Router)
 

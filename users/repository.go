@@ -17,4 +17,5 @@ var (
 type UserRepository interface {
 	Create(ctx context.Context, website User) (*User, error)
 	GetById(ctx context.Context, ID uuid.UUID) (*User, error)
+	GetByName(ctx context.Context, ID uuid.UUID) (*User, error)
 }
